@@ -7,7 +7,7 @@ import palmerpenguins # This package provides the Palmer Penguins dataset
 # Use the built-in function to load the Palmer Penguins dataset
 penguins_df = palmerpenguins.load_penguins()
 
-ui.page_opts(title="SGolla PyShiny Palmer Penguins Example", fillable=True)
+ui.page_opts(title="Penguins Data By SGolla", fillable=True)
 with ui.layout_columns():
 
     @render_plotly
