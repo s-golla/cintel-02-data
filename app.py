@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from palmerpenguins import load_penguins
 from shiny.express import ui, input, render
 import plotly.express as px
-from shiny import render
+from shiny import reactive
 from shiny.render import plot as render_plot
 from shinywidgets import render_plotly
 
@@ -12,134 +12,109 @@ from shinywidgets import render_plotly
 penguins = load_penguins()
 
 # --- 2. User Interface (UI) Definition ---
-ui.page_opts(title="Interactive Data Visualizations", fillable=True)
+ui.page_opts(title="Interactive Penguin Data Visualizations", fillable=True)
 
 with ui.sidebar(open="open"):
-    ui.h2("Sidebar")
-    ui.input_selectize(
-        "selected_attribute",
-        "Select Attribute",
-        choices=["bill_length_mm", "bill_depth_mm", "flipper_length_mm", "body_mass_g"],
-    )
-    ui.input_numeric("plotly_bin_count", "Plotly Histogram Bins", 20)
-    ui.input_slider("seaborn_bin_count", "Seaborn Histogram Bins", 0, 100, 20)
+    ui.h2("Sidebar Filters")
     ui.input_checkbox_group(
         "selected_species_list",
-        "Filter Species",
+        "Select Species",
         choices=["Adelie", "Gentoo", "Chinstrap"],
         selected=["Adelie", "Gentoo", "Chinstrap"],
         inline=True,
     )
     ui.hr()
-    ui.a("GitHub", href="https://github.com/s-golla/cintel-02-data", target="_blank")
+    ui.h3("Histogram Options")
+    ui.input_selectize(
+        "selected_attribute",
+        "Select Attribute for Histograms",
+        choices=["bill_length_mm", "bill_depth_mm", "flipper_length_mm", "body_mass_g"],
+        selected="flipper_length_mm"
+    )
+    ui.input_numeric("plotly_bin_count", "Plotly Histogram Bins", 20)
+    ui.input_slider("seaborn_bin_count", "Seaborn Histogram Bins", 0, 100, 20)
 
-    # These two inputs were part of the original code, make sure they are still desired
-    ui.input_slider("selected_number_of_bins", "Number of Bins", 0, 100, 20)
     ui.hr()
-    ui.h6("Penguin Plot Filters")
-    all_species = ["All"] + sorted(penguins["species"].dropna().unique().tolist())
-    ui.input_select("selected_species", "Select Species", choices=all_species, selected="All")
-
+    ui.a("GitHub Repository", href="https://github.com/s-golla/cintel-02-data", target="_blank")
 
 # --- 3. Server Logic and Output Definitions ---
 
-# This still uses matplotlib, so @render.plot is correct
-@render_plot(alt="Histogram using the selected number of bins for random data")
-def plot_histogram():
-    data = np.random.randn(800)
-    plt.hist(data, bins=input.selected_number_of_bins(), density=True, color="darkorange", edgecolor="black")
+@reactive.calc
+def filtered_data():
+    if not input.selected_species_list():
+        return penguins.head(0)
+        
+    df = penguins[penguins["species"].isin(input.selected_species_list())].copy()
+    return df
 
-    plt.title("Frequency Distribution of Randomly Generated Data")
-    plt.xlabel("Value")
-    plt.ylabel("Density")
-
-# This still uses seaborn (which is built on matplotlib), so @render.plot is correct
-@render_plot(alt="Scatterplot of Penguin Flipper Length vs Body Mass")
-def penguin_scatter():
-    selected_species = input.selected_species()
-
-    if selected_species == "All":
-        filtered_penguins = penguins
-    else:
-        filtered_penguins = penguins[penguins["species"] == selected_species]
-
-    sns.scatterplot(
-        data=filtered_penguins,
-        x="flipper_length_mm",
-        y="body_mass_g",
-        hue="species",
-        style="sex",
-        palette={"Adelie": "red", "Chinstrap": "blue", "Gentoo": "green"}
-    )
-
-    plt.title(f"Penguin Flipper Length vs Body Mass by Species and Sex ({selected_species})")
-    plt.xlabel("Flipper Length (mm)")
-    plt.ylabel("Body Mass (g)")
-
-
+# --- Data Tables and Grids ---
 with ui.layout_columns():
     with ui.card(full_screen=True):
-        ui.card_header("Penguin Data Table")
+        ui.card_header("Penguin Data Table (Filtered)")
 
         @render.data_frame
         def penguin_data_table():
-            return render.DataTable(penguins)
+            return render.DataTable(filtered_data())
 
     with ui.card(full_screen=True):
-        ui.card_header("Penguin Data Grid")
+        ui.card_header("Penguin Data Grid (Filtered)")
 
         @render.data_frame
         def penguin_data_grid():
-            return render.DataGrid(penguins)
+            return render.DataGrid(filtered_data())
 
+# --- Histograms and Scatterplot ---
 with ui.layout_columns():
     with ui.card(full_screen=True):
-        ui.card_header("Plotly Histogram: All Species")
+        ui.card_header("Plotly Histogram (Filtered by Species)")
 
-        # CHANGED: Use @render_plotly for Plotly figures
         @render_plotly
         def plotly_histogram():
             selected_attribute = input.selected_attribute()
             return px.histogram(
-                penguins,
+                filtered_data(),
                 x=selected_attribute,
                 nbins=input.plotly_bin_count(),
-                title=f"Distribution of {selected_attribute}",
-            )
+                title=f"Distribution of {selected_attribute} (Filtered)",
+                color="species",
+                facet_col="species",
+                facet_col_wrap=2
+            ).update_layout(showlegend=False)
 
     with ui.card(full_screen=True):
-        ui.card_header("Seaborn Histogram: All Species")
+        ui.card_header("Seaborn Histogram (Filtered by Species)")
 
-        # This still uses seaborn (matplotlib), so @render_plot is correct
         @render_plot
         def seaborn_histogram():
             selected_attribute = input.selected_attribute()
+            plt.figure(figsize=(8, 6))
             sns.histplot(
-                data=penguins,
+                data=filtered_data(),
                 x=selected_attribute,
                 bins=input.seaborn_bin_count(),
                 kde=True,
+                hue="species",
+                multiple="stack",
             )
-            plt.title(f"Distribution of {selected_attribute}")
+            plt.title(f"Distribution of {selected_attribute} (Filtered)")
             plt.xlabel(selected_attribute)
             plt.ylabel("Count")
+            plt.legend(title="Species")
+            plt.tight_layout()
+
 
     with ui.card(full_screen=True):
-        ui.card_header("Plotly Scatterplot: Species")
+        ui.card_header("Plotly Scatterplot: Flipper Length vs Body Mass (Filtered by Species)")
 
-        # CHANGED: Use @render_plotly for Plotly figures
         @render_plotly
         def plotly_scatterplot():
-            # Filter data based on selected species
-            filtered_penguins = penguins[penguins["species"].isin(input.selected_species_list())]
-
             return px.scatter(
-                filtered_penguins,
+                filtered_data(),
                 x="flipper_length_mm",
                 y="body_mass_g",
                 color="species",
                 symbol="sex",
-                title="Penguin Flipper Length vs Body Mass by Species and Sex",
+                title="Penguin Flipper Length vs Body Mass by Species and Sex (Filtered)",
                 labels={
                     "flipper_length_mm": "Flipper Length (mm)",
                     "body_mass_g": "Body Mass (g)",
