@@ -65,15 +65,17 @@ with ui.layout_columns():
 
 # --- Histograms and Scatterplot ---
 with ui.layout_columns():
-    
-    @render_plotly
-    def plot1():
-        return px.histogram(px.data.tips(), y="tip")
 
-    @render_plotly
-    def plot2():
-        return px.histogram(px.data.tips(), y="total_bill")
-        
+    # Commenting the original content Start......
+    #@render_plotly
+    #def plot1():
+    #    return px.histogram(px.data.tips(), y="tip")
+
+    #@render_plotly
+    #def plot2():
+    #    return px.histogram(px.data.tips(), y="total_bill")
+
+    # Commenting the original content End......
     with ui.card(full_screen=True):
         ui.card_header("Plotly Histogram")
 
