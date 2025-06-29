@@ -50,14 +50,14 @@ def filtered_data():
 # --- Data Tables and Grids ---
 with ui.layout_columns():
     with ui.card(full_screen=True):
-        ui.card_header("Penguin Data Table")
+        ui.card_header("Penguin Data Table (Filtered)")
 
         @render.data_frame
         def penguin_data_table():
             return render.DataTable(filtered_data())
 
     with ui.card(full_screen=True):
-        ui.card_header("Penguin Data Grid")
+        ui.card_header("Penguin Data Grid (Filtered)")
 
         @render.data_frame
         def penguin_data_grid():
@@ -65,35 +65,26 @@ with ui.layout_columns():
 
 # --- Histograms and Scatterplot ---
 with ui.layout_columns():
-
-    # Commenting the original content Start......
-    #@render_plotly
-    #def plot1():
-    #    return px.histogram(px.data.tips(), y="tip")
-
-    #@render_plotly
-    #def plot2():
-    #    return px.histogram(px.data.tips(), y="total_bill")
-
-    # Commenting the original content End......
     with ui.card(full_screen=True):
-        ui.card_header("Plotly Histogram")
+        ui.card_header("Plotly Histogram (Combined and Filtered by Species)") # Updated title
 
         @render_plotly
         def plotly_histogram():
             selected_attribute = input.selected_attribute()
             return px.histogram(
-                filtered_data(),
+                filtered_data(), # Data is already filtered by selected_species_list
                 x=selected_attribute,
                 nbins=input.plotly_bin_count(),
-                title=f"Distribution of {selected_attribute}",
-                color="species",
-                facet_col="species",
-                facet_col_wrap=2
-            ).update_layout(showlegend=False)
+                title=f"Distribution of {selected_attribute} (Combined and Filtered)", # Updated title
+                color="species", # Keep color to differentiate species within the combined histogram
+                barmode="overlay", # Overlay bars for different species
+                opacity=0.7 # Add some opacity to see overlapping bars
+            )
+            # Removed facet_col and facet_col_wrap to combine into one plot.
+            # Removed update_layout(showlegend=False) as legend is now useful.
 
     with ui.card(full_screen=True):
-        ui.card_header("Seaborn Histogram")
+        ui.card_header("Seaborn Histogram (Filtered by Species)")
 
         @render_plot
         def seaborn_histogram():
@@ -107,7 +98,7 @@ with ui.layout_columns():
                 hue="species",
                 multiple="stack",
             )
-            plt.title(f"Distribution of {selected_attribute}")
+            plt.title(f"Distribution of {selected_attribute} (Filtered)")
             plt.xlabel(selected_attribute)
             plt.ylabel("Count")
             plt.legend(title="Species")
@@ -115,7 +106,7 @@ with ui.layout_columns():
 
 
     with ui.card(full_screen=True):
-        ui.card_header("Plotly Scatterplot: Flipper Length vs Body Mass")
+        ui.card_header("Plotly Scatterplot: Flipper Length vs Body Mass (Filtered by Species)")
 
         @render_plotly
         def plotly_scatterplot():
@@ -125,7 +116,7 @@ with ui.layout_columns():
                 y="body_mass_g",
                 color="species",
                 symbol="sex",
-                title="Penguin Flipper Length vs Body Mass by Species and Sex",
+                title="Penguin Flipper Length vs Body Mass by Species and Sex (Filtered)",
                 labels={
                     "flipper_length_mm": "Flipper Length (mm)",
                     "body_mass_g": "Body Mass (g)",
